@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Zego Live Embed</title>
+  <script src="https://unpkg.com/@zegocloud/zego-uikit-prebuilt@latest/dist/index.umd.js"></script>
+  <style>html,body,#root{height:100%;margin:0}#root{display:flex;align-items:center;justify-content:center}</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const roomID = params.get('roomID') || 'room-demo';
+    const uid = params.get('uid') || ('u' + Math.floor(Math.random()*100000));
+    const userName = params.get('username') || 'Guest';
+    const role = (params.get('role') === 'host') ? 'host' : 'audience';
+
+    async function fetchToken(uid, roomID){
+      // <-- یہاں اپنا Vercel token server URL ڈالو (deploy کے بعد بدلو)
+      const tokenEndpoint = 'https://YOUR_VERCEL_APP.vercel.app/api/get_access_token';
+      const res = await fetch(`${tokenEndpoint}?uid=${encodeURIComponent(uid)}&roomID=${encodeURIComponent(roomID)}`);
+      if(!res.ok) throw new Error('Token server error: ' + res.status);
+      const j = await res.json();
+      return j.token || j;
+    }
+
+    (async () => {
+      const token = await fetchToken(uid, roomID);
+      const kit = ZegoUIKitPrebuilt.create(token);
+
+      kit.joinRoom({
+        container: document.getElementById('root'),
+        scenario: {
+          mode: ZegoUIKitPrebuilt.ScenarioModel.LiveStreaming,
+          config: {
+            role: (role === 'host') ? ZegoUIKitPrebuilt.LiveRole.Host : ZegoUIKitPrebuilt.LiveRole.Audience
+          }
+        },
+        userName: userName
+      });
+    })().catch(e => {
+      document.getElementById('root').innerText = 'Error: ' + e.message;
+      console.error(e);
+    });
+  </script>
+</body>
+</html>
